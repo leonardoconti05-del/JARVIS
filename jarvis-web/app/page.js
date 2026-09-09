@@ -13,12 +13,22 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('ready');
   const [activity, setActivity] = useState([]);
+  const [dailySummary, setDailySummary] = useState(null);
   const historyRef = useRef([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    fetch('/api/summary')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.summary) setDailySummary(d);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -96,6 +106,12 @@ export default function Home() {
 
         <main style={styles.chat}>
           <div style={styles.messages}>
+            {dailySummary && (
+              <div style={styles.summaryBanner}>
+                <div style={styles.summaryTitle}>Controllo automatico — ai-setup-agency</div>
+                <div style={styles.summaryBody}>{dailySummary.summary}</div>
+              </div>
+            )}
             {messages.map((m, i) => (
               <div key={i} style={{ ...styles.msg, ...(m.role === 'user' ? styles.msgUser : {}) }}>
                 <div style={{ ...styles.msgRole, ...(m.role === 'user' ? { textAlign: 'right' } : {}) }}>
@@ -165,6 +181,26 @@ const styles = {
   railItemDetail: { fontSize: 11.5, color: 'var(--text-muted)', wordBreak: 'break-word' },
   chat: { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 },
   messages: { flex: 1, overflowY: 'auto', padding: '22px 26px', display: 'flex', flexDirection: 'column', gap: 18 },
+  summaryBanner: {
+    border: '1px solid var(--accent-dim)',
+    background: 'var(--panel-2)',
+    borderRadius: 5,
+    padding: '10px 13px',
+    maxWidth: 620,
+  },
+  summaryTitle: {
+    fontFamily: 'var(--mono)',
+    fontSize: 10.5,
+    letterSpacing: '0.08em',
+    color: 'var(--accent)',
+    marginBottom: 6,
+  },
+  summaryBody: {
+    fontSize: 13.5,
+    lineHeight: 1.5,
+    whiteSpace: 'pre-wrap',
+    color: 'var(--text)',
+  },
   msg: { maxWidth: 620 },
   msgUser: { alignSelf: 'flex-end' },
   msgRole: { fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 4 },

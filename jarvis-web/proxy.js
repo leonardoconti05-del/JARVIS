@@ -7,7 +7,8 @@ export function proxy(req) {
     pathname.startsWith('/_next') ||
     pathname === '/favicon.ico' ||
     pathname === '/login' ||
-    pathname === '/api/login'
+    pathname === '/api/login' ||
+    pathname === '/api/cron/daily-summary'
   ) {
     return NextResponse.next();
   }
