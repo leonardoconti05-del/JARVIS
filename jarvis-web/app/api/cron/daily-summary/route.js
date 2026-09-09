@@ -56,6 +56,7 @@ export async function GET(req) {
       summary = `${total} nuova/e richiesta/e nelle ultime 24 ore su ai-setup-agency.\nUltime:\n${preview}`;
     }
   } catch (e) {
+    console.error('daily-summary query error:', e);
     summary = `Controllo automatico fallito: ${String(e.message || e)}. Controlla che la tabella "${TABLE}" e la colonna "${TIMESTAMP_COLUMN}" esistano con questo nome esatto.`;
   }
 
@@ -65,6 +66,7 @@ export async function GET(req) {
       .upsert({ id: SUMMARY_ID, summary, generated_at: new Date().toISOString() });
     if (upsertErr) throw upsertErr;
   } catch (e) {
+    console.error('daily-summary upsert error:', e);
     return NextResponse.json({ error: `Riepilogo generato ma non salvato: ${String(e.message || e)}` }, { status: 500 });
   }
 
