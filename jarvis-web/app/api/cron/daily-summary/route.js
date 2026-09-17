@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const SUMMARY_ID = 'ai_setup_agency_daily';
-const TABLE = 'richieste_pazienti';
-const TIMESTAMP_COLUMN = 'created_at';
+const TABLE = 'richieste_clienti';
+const TIMESTAMP_COLUMN = 'updated_at';
 
 function getClient(urlEnv, keyEnv) {
   const url = process.env[urlEnv];
@@ -32,7 +32,7 @@ export async function GET(req) {
   try {
     const { data, error, count } = await source
       .from(TABLE)
-      .select('*', { count: 'exact' })
+      .select('*, clienti(nome_attivita)', { count: 'exact' })
       .gte(TIMESTAMP_COLUMN, since)
       .order(TIMESTAMP_COLUMN, { ascending: false })
       .limit(5);
@@ -45,12 +45,14 @@ export async function GET(req) {
     } else {
       const preview = (data || [])
         .map((row) => {
-          const bits = Object.entries(row)
-            .filter(([k]) => k !== TIMESTAMP_COLUMN)
-            .slice(0, 4)
+          const nomeAttivita = row.clienti?.nome_attivita || 'Attività sconosciuta';
+          const dati = row.dati_raccolti || {};
+          const campiTesto = Object.entries(dati)
+            .filter(([k]) => k !== 'urgente')
             .map(([k, v]) => `${k}: ${v}`)
             .join(', ');
-          return `- ${bits}`;
+          const statoLabel = row.stato === 'urgente' ? '🚨 URGENTE' : row.stato === 'completata' ? '✅ Completata' : '⏳ In corso';
+          return `- [${nomeAttivita}] ${statoLabel} — ${campiTesto || 'nessun dato'} (tel: ${row.numero_utente || '?'})`;
         })
         .join('\n');
       summary = `${total} nuova/e richiesta/e nelle ultime 24 ore su ai-setup-agency.\nUltime:\n${preview}`;
