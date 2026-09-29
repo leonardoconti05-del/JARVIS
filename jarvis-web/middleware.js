@@ -1,23 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verificaSessione } from './lib/session.js';
 
-// FIX (22/9/2026): questo file sostituisce proxy.js, che NON veniva mai
-// eseguito. Next.js cerca specificamente un file chiamato "middleware.js"
-// (o .ts) alla root del progetto, con una funzione esportata chiamata
-// "middleware" (o export default) — proxy.js aveva sia il nome del file
-// sia il nome della funzione sbagliati ("proxy" invece di "middleware"),
-// quindi Next.js lo ignorava silenziosamente: nessun errore, nessuna
-// protezione delle route applicata. Bug "silenzioso" nel senso letterale:
-// l'app funzionava (nessun crash), semplicemente senza alcuna
-// autenticazione reale sulle route protette.
-//
-// Oltre a correggere nome file/funzione, verifica ora una sessione firmata
-// (lib/session.js) invece di confrontare il cookie con la password in
-// chiaro — coerente con il fix di app/api/login/route.js.
-
-export function middleware(req) {
+export async function middleware(req) {
   const { pathname } = req.nextUrl;
-
   if (
     pathname.startsWith('/_next') ||
     pathname === '/favicon.ico' ||
@@ -30,7 +15,7 @@ export function middleware(req) {
 
   const SESSION_SECRET = process.env.SESSION_SECRET;
   const cookie = req.cookies.get('jarvis_auth')?.value;
-  const sessione = SESSION_SECRET ? verificaSessione(cookie, SESSION_SECRET) : null;
+  const sessione = SESSION_SECRET ? await verificaSessione(cookie, SESSION_SECRET) : null;
 
   if (!sessione || sessione.authenticated !== true) {
     if (pathname.startsWith('/api/')) {
@@ -43,6 +28,4 @@ export function middleware(req) {
   return NextResponse.next();
 }
 
-export const config = {
-  matcher: '/((?!_next/static|_next/image).*)',
-};
+export const config = { matcher: '/((?!_next/static|_next/image).*)' };
