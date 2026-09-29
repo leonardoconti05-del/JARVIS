@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const ANTHROPIC_MODEL = 'claude-sonnet-5';
+const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
 // Elenco dei progetti Supabase collegati. Per aggiungerne uno nuovo:
