@@ -22,6 +22,53 @@ export const SUPABASE_PROJECTS = {
 
 const PROJECT_KEYS = Object.keys(SUPABASE_PROJECTS);
 
+const AI_SETUP_TENANT_TABLES = new Set([
+  'clienti',
+  'configurazioni_cliente',
+  'richieste_clienti',
+  'documents',
+  'knowledge_chunks',
+  'lacune_conoscenza',
+  'servizi_cliente',
+  'personale_cliente',
+  'whatsapp_conversations',
+  'event_log',
+  'utilizzo_mensile',
+  'ai_action_ledger',
+  'approval_requests',
+  'tenant_action_policy',
+]);
+
+const AI_SETUP_GLOBAL_TABLES = new Set([
+  'agent_registry',
+  'sector_profiles',
+  'sector_faq',
+  'sector_test_scenarios',
+  'sector_eval_runs',
+]);
+
+function authorizedTenantIds() {
+  const raw = process.env.JARVIS_AUTHORIZED_TENANT_IDS || '';
+  return [...new Set(raw.split(',').map((value) => value.trim()).filter(Boolean))];
+}
+
+function validateAiSetupReadScope({ table, filters }) {
+  if (AI_SETUP_GLOBAL_TABLES.has(table)) return null;
+  if (!AI_SETUP_TENANT_TABLES.has(table)) {
+    return 'Tabella AI Setup Agency non autorizzata per il read tool.';
+  }
+
+  const tenantIds = authorizedTenantIds();
+  if (tenantIds.length === 0) return 'Scope tenant Jarvis non configurato.';
+  const tenantFilter = Array.isArray(filters)
+    ? filters.find((f) => f?.column === 'cliente_id' && f?.op === 'eq')
+    : null;
+  if (!tenantFilter || !tenantIds.includes(String(tenantFilter.value))) {
+    return 'Query tenant AI Setup Agency negata: serve un cliente_id autorizzato dal server.';
+  }
+  return null;
+}
+
 export const TOOLS = [
   { name: 'read_core_tenant', description: 'Legge in sola lettura il quadro operativo di un tenant AI Setup Agency attraverso il Core API.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' } }, required: ['cliente_id'] } },
   { type: 'web_search_20250305', name: 'web_search' },
@@ -106,6 +153,10 @@ function getSupabaseClient(projectKey) {
 }
 
 export async function runSupabaseQuery({ project, table, select, filters, limit }) {
+  if (project === 'ai_setup_agency') {
+    const scopeError = validateAiSetupReadScope({ table, filters });
+    if (scopeError) return { error: scopeError };
+  }
   const { client, error } = getSupabaseClient(project);
   if (error) return { error };
   try {
@@ -128,6 +179,9 @@ export async function runSupabaseQuery({ project, table, select, filters, limit 
 }
 
 export async function writeSupabase({ project, table, mode, values, match }) {
+  if (project === 'ai_setup_agency') {
+    return { error: 'Scritture dirette su AI Setup Agency disabilitate: usare il Core/Action Gateway governato.' };
+  }
   const { client, error } = getSupabaseClient(project);
   if (error) return { error };
   try {
