@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { readCoreTenant } from './core-read.js';
 
 const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -22,6 +23,7 @@ export const SUPABASE_PROJECTS = {
 const PROJECT_KEYS = Object.keys(SUPABASE_PROJECTS);
 
 export const TOOLS = [
+  { name: 'read_core_tenant', description: 'Legge in sola lettura il quadro operativo di un tenant AI Setup Agency attraverso il Core API.', input_schema: { type: 'object', properties: { cliente_id: { type: 'string' } }, required: ['cliente_id'] } },
   { type: 'web_search_20250305', name: 'web_search' },
   {
     name: 'query_supabase',
@@ -196,7 +198,11 @@ export async function runAgent(history) {
 
     const toolResults = [];
     for (const block of toolUses) {
-      if (block.name === 'query_supabase') {
+      if (block.name === 'read_core_tenant') {
+        toolLog.push({ tool: 'read_core_tenant', input: block.input });
+        const result = await readCoreTenant(block.input.cliente_id);
+        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
+      } else if (block.name === 'query_supabase') {
         toolLog.push({ tool: 'query_supabase', input: block.input });
         const result = await runSupabaseQuery(block.input);
         toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
